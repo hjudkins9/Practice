@@ -20,5 +20,16 @@ print(image_count)
 
 print(data_dir)
 
-roses = list(data_dir.glob('*/roses/*'))
-PIL.Image.open(str(roses[0]))
+batch_size = 32
+img_height = 180
+img_width = 180
+
+train_ds = tf.keras.utils.image_dataset_from_directory(
+    data_dir,
+    validation_split=0.2,
+    subset="training",
+    seed=123,
+    image_size=(img_height, img_width),
+    batch_size=batch_size
+)
+
