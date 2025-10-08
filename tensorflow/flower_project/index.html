@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Flora Finder - ML Classifier</title>
+    <!-- Load Tailwind CSS and TensorFlow.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- UPDATED: Using a newer, more stable version of TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+    <!-- Load React and ReactDOM (required for the JSX to work) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Load Babel to transform JSX/ES6 into standard JS in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Define the root container for the React app */
+        #root {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- The main application script is now in a type="text/babel" script tag -->
+    <script type="text/babel">
+        // Removed: import React, { useState, useEffect, useRef, useMemo } from 'react';
+        // We now access hooks directly from the global React object: React.useState, React.useEffect, etc.
+
+        const IMAGE_SIZE = 180;
+        // These class names must match the labels from your Python training script (train_model.py)
+        const CLASS_NAMES = [
+            "daisy",
+            "dandelion",
+            "roses",
+            "sunflowers",
+            "tulips"
+        ];
+
+        // Note on tf: Since the mock setup is removed, 'tf' is expected to be available
+        // on the window object after the TensorFlow.js script loads.
+
+        const App = () => {
+            // Using global React hooks
+            const [page, setPage] = React.useState('home'); // 'home', 'input', 'result'
+            const [model, setModel] = React.useState(null);
+            const [prediction, setPrediction] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+            const [status, setStatus] = React.useState("Initializing...");
+            const [imageURL, setImageURL] = React.useState(null);
+            const imageRef = React.useRef(null);
+            const fileInputRef = React.useRef(null);
+            
+            // Check if tf is available globally
+            const isTfAvailable = typeof window.tf !== 'undefined';
+
+            // 1. Model Loading
+            React.useEffect(() => {
+                // Since this is now in an HTML file loaded via HTTP, the window.tf check is robust
+                if (!isTfAvailable) {
+                    setStatus("ERROR: TensorFlow.js not loaded. Check script tag.");
+                    setLoading(false);
+                    return;
+                }
+
+                const loadResources = async () => {
+                    try {
+                        setStatus("Loading flower classifier model...");
+                        
+                        // Using a root-relative path (starting with /)
+                        const loadedModel = await window.tf.loadLayersModel('/web_model/model.json');
+                        
+                        setModel(loadedModel);
+                        setStatus("Model loaded. Click 'Start' to begin.");
+                        setLoading(false);
+                    } catch (error) {
+                        // CRITICAL DEBUGGING: Log the full error object. This often reveals which .bin file failed to load.
+                        console.error("Failed to load model layers. Check if all .bin files are present and loading:", error);
+                        // Updated message to prompt for the specific console error
+                        setStatus("ERROR: Model files failed to load. Please check the **browser Console (F12)** and share the exact error message.");
+                        setLoading(false);
+                    }
+                };
+                
+                // Wait for the window.tf object to be defined before attempting to load
+                if (window.tf) {
+                    loadResources();
+                } else {
+                    // Fallback for late loading (though the script tag is typically fast)
+                    const checkTf = setInterval(() => {
+                        if (window.tf) {
+                            clearInterval(checkTf);
+                            loadResources();
+                        }
+                    }, 100);
+                    return () => clearInterval(checkTf);
+                }
+
+            }, [isTfAvailable]); // Rerun if the TF availability changes
+
+            // 2. Prediction Logic
+            const runPrediction = async () => {
+                if (!model || !imageRef.current) {
+                    setStatus("Error: Model not ready or image missing.");
+                    return;
+                }
+
+                setStatus("Classifying image...");
+                setPrediction(null);
+                
+                try {
+                    // Use tf.tidy to automatically clean up intermediate tensors and prevent memory leaks
+                    const { predictedClass, confidence } = window.tf.tidy(() => {
+                        // Preprocess the image: convert to tensor, resize, normalize, add batch dimension
+                        const imageTensor = window.tf.browser.fromPixels(imageRef.current)
+                            .resizeBilinear([IMAGE_SIZE, IMAGE_SIZE])
+                            .toFloat()
+                            .div(window.tf.scalar(255))
+                            .expandDims(); 
+
+                        // Run prediction
+                        const predictions = model.predict(imageTensor);
+                        
+                        // Get the raw scores (logits)
+                        const scores = predictions.dataSync(); 
+                        predictions.dispose();
+
+                        // Apply softmax (optional, if model output is not softmaxed)
+                        // For a model trained with SparseCategoricalCrossentropy(from_logits=True), this is usually needed.
+                        const softmaxScores = window.tf.softmax(window.tf.tensor(scores));
+                        const probs = softmaxScores.dataSync();
+                        softmaxScores.dispose();
+
+                        // Find the index with the highest probability
+                        const maxProb = Math.max(...probs);
+                        const predictedIndex = probs.indexOf(maxProb);
+                        const confidence = maxProb * 100;
+                        
+                        return {
+                            predictedClass: CLASS_NAMES[predictedIndex],
+                            confidence: confidence.toFixed(2)
+                        };
+                    });
+
+                    setPrediction({ name: predictedClass, confidence });
+                    setStatus(`Prediction Complete: ${predictedClass}`);
+                    setPage('result');
+
+                } catch (error) {
+                    console.error("Prediction failed:", error);
+                    setStatus("An error occurred during prediction.");
+                    // Important: Dispose of any tensors created outside of tidy if an error occurs
+                    window.tf.disposeVariables(); 
+                }
+            };
+
+            // 3. Image File Handling (used by both input button and drag-and-drop)
+            const handleImageFile = (file) => {
+                if (file && file.type.startsWith('image/')) {
+                    // Clean up previous URL object to free resources
+                    if (imageURL) {
+                        URL.revokeObjectURL(imageURL);
+                    }
+                    setPrediction(null);
+                    const url = URL.createObjectURL(file);
+                    setImageURL(url);
+                    // Classification will be triggered by the `onLoad` event of the imageRef below
+                    setStatus("Image loaded. Classification will start automatically.");
+                } else {
+                    setStatus("Please drop a valid image file (JPEG or PNG).");
+                }
+            };
+
+            // Drag and Drop Handlers
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('border-indigo-500', 'bg-indigo-50');
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50');
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                handleDragLeave(e);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleImageFile(e.dataTransfer.files[0]);
+                }
+            };
+
+            // 4. Navigation and Cleanup
+            const resetToInput = () => {
+                setPrediction(null);
+                
+                // Clear the imageURL and revoke the object URL
+                if (imageURL) {
+                    URL.revokeObjectURL(imageURL);
+                    setImageURL(null); 
+                }
+
+                setPage('input');
+                setStatus(loading ? "Model is loading..." : "Ready for a new picture.");
+            };
+
+            const resetToHome = () => {
+                // Full cleanup when returning to home
+                if (imageURL) {
+                    URL.revokeObjectURL(imageURL);
+                    setImageURL(null);
+                }
+                setPrediction(null);
+                setPage('home');
+                setStatus(loading ? "Model is loading..." : "Model loaded. Click 'Start' to begin.");
+            };
+
+            // --- Page Components ---
+
+            const HomePage = () => (
+                <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+                    <h1 className="text-6xl font-extrabold text-indigo-700 leading-tight mb-4">
+                        The Flora Finder
+                    </h1>
+                    <p className="text-xl text-gray-600 mb-10">
+                        Instantly identify flowers using a specialized neural network.
+                    </p>
+                    <button
+                        onClick={() => setPage('input')}
+                        disabled={loading}
+                        className={`py-4 px-10 text-xl font-bold rounded-full transition duration-300 shadow-lg 
+                            ${loading
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-xl'
+                            }`}
+                    >
+                        {loading ? 'Model Loading...' : 'Start Classification'}
+                    </button>
+                </div>
+            );
+
+            const InputPage = () => (
+                <div className="flex flex-col space-y-6">
+                    <h2 className="text-2xl font-semibold text-indigo-700 text-center">
+                        Give me a flower picture! I will help you identify it!
+                    </h2>
+                    
+                    <p className="text-sm text-center text-gray-500 p-2 border border-yellow-300 bg-yellow-50 rounded-lg">
+                        <span className="font-bold">Model Supported Flowers:</span> {CLASS_NAMES.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}.
+                    </p>
+
+                    {/* Drag and Drop Zone */}
+                    <div 
+                        className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 h-64 transition duration-200 
+                            ${imageURL ? 'border-gray-300' : 'border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50'}`}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current.click()}
+                    >
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageFile(e.target.files[0])}
+                            ref={fileInputRef}
+                            className="hidden"
+                        />
+                        
+                        {imageURL ? (
+                            <div className='flex flex-col items-center space-y-4'>
+                                {/* The image is loaded here, and its onLoad event triggers runPrediction */}
+                                <img 
+                                    ref={imageRef} 
+                                    src={imageURL} 
+                                    alt="Flower to classify" 
+                                    onLoad={runPrediction} // Classification trigger
+                                    className="w-auto h-40 object-contain rounded-md shadow-lg"
+                                />
+                                {/* We hide the file input once an image is loaded, as the prediction is running */}
+                                <p className='text-gray-500'>Image uploaded. Classifying now...</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Flower Icon */}
+                                <svg className="w-12 h-12 text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 012 10.285M15 16l-3-3m0 0l-3 3m3-3v9"></path></svg>
+                                <p className="text-lg font-medium text-indigo-600">Drag & Drop or Click to Select Picture</p>
+                                <p className="text-sm text-gray-500 mt-1">(Image will classify automatically)</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+
+            const ResultPage = () => (
+                <div className="flex flex-col space-y-6">
+                    <h2 className="text-2xl font-bold text-center text-green-700">Classification Complete!</h2>
+
+                    {/* Image Preview and Prediction */}
+                    <div className="border border-green-200 rounded-xl p-4 bg-green-50 shadow-md">
+                        <img 
+                            src={imageURL} 
+                            alt="Classified flower" 
+                            className="w-full h-auto max-h-64 object-contain rounded-lg mb-4"
+                        />
+                        
+                        {/* Prediction Output */}
+                        {prediction && (
+                            <div className="text-center">
+                                <p className="text-xl font-semibold text-gray-800">
+                                    Prediction: 
+                                </p>
+                                <p className="text-4xl font-extrabold text-green-700 capitalize mt-1 mb-2">
+                                    {prediction.name}
+                                </p>
+                                <p className="text-lg text-gray-600">
+                                    Confidence: <span className="font-bold">{prediction.confidence}%</span>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex space-x-4 mt-4">
+                        <button
+                            onClick={resetToInput}
+                            className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition duration-300 shadow-md"
+                        >
+                            Try Again?
+                        </button>
+                        <button
+                            onClick={resetToHome}
+                            className="flex-1 py-3 rounded-xl font-bold text-indigo-600 bg-white border border-indigo-600 hover:bg-indigo-50 transition duration-300 shadow-md"
+                        >
+                            Home
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // --- Main Renderer ---
+            const renderPage = React.useMemo(() => {
+                switch (page) {
+                    case 'input':
+                        return <InputPage />;
+                    case 'result':
+                        // Only render result page if prediction data exists
+                        return prediction ? <ResultPage /> : <InputPage />;
+                    case 'home':
+                    default:
+                        return <HomePage />;
+                }
+            }, [page, loading, imageURL, prediction, status]); // Dependencies for re-rendering pages
+
+            return (
+                <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
+                    <div className="w-full max-w-xl bg-white shadow-2xl rounded-2xl p-6 md:p-10 transform transition-all duration-500">
+                        <header className="text-center mb-6 border-b pb-4">
+                            <h1 className="text-3xl font-bold text-gray-800">The Flora Finder</h1>
+                            <p className={`mt-2 text-sm font-medium ${loading ? 'text-orange-500' : 'text-green-600'}`}>
+                                Status: {status}
+                            </p>
+                        </header>
+
+                        {renderPage}
+
+                        <footer className="mt-8 text-center text-xs text-gray-400 pt-4 border-t">
+                            <p>Flower Classification powered by TensorFlow.js.</p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        // Use ReactDOM.render to inject the React component into the #root div
+        const rootElement = document.getElementById('root');
+        ReactDOM.render(<App />, rootElement);
+    </script>
+</body>
+</html>
