@@ -72,7 +72,7 @@
                         setStatus("Loading flower classifier model...");
                         
                         // Using a root-relative path (starting with /)
-                        const loadedModel = await window.tf.loadLayersModel('/web_model/model.json');
+                        const loadedModel = await window.tf.loadLayersModel('./web_model/model.json?v=2');
                         
                         setModel(loadedModel);
                         setStatus("Model loaded. Click 'Start' to begin.");
@@ -377,7 +377,8 @@
 
         // Use ReactDOM.render to inject the React component into the #root div
         const rootElement = document.getElementById('root');
-        ReactDOM.render(<App />, rootElement);
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
     </script>
 </body>
 </html>
