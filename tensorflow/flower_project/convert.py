@@ -27,7 +27,7 @@ def main_converter():
             WEB_OUTPUT_DIR
         ], check=True)
         
-        print("\n✅ Conversion Complete!")
+        print("\n✅ Conversion Complete! Run 'patch_model.py' to fix it.")
 
     except Exception as e:
         print(f"\n❌ A critical error occurred during conversion:")
@@ -36,6 +36,3 @@ def main_converter():
 
 if __name__ == '__main__':
     main_converter()
-    print("\n------------------------------------------------------------")
-    print("NEXT STEP: Restart your HTTP server and refresh index.html.")
-    print("------------------------------------------------------------")

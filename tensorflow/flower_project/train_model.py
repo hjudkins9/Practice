@@ -1,6 +1,6 @@
 # Henry Judkins
 # Script to train a Flower Classifier CNN
-# This version uses the Keras Functional API for a clean, convertible model.
+# This version is CLEANED for conversion.
 
 import numpy as np
 import os
@@ -14,9 +14,10 @@ import pathlib
 batch_size = 32
 img_height = 180
 img_width = 180
-# Let's do a quick 2-epoch test first to prove it works
-epochs = 2 
-#epochs = 50 # You can change this back after the test
+# Quick test with 2 epochs
+epochs = 50
+# After this test works, you can set this to 50
+# epochs = 50 
 
 # --- 1. DATA SETUP ---
 dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
@@ -49,34 +50,30 @@ train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 num_classes = len(class_names)
 
-# --- 3. MODEL DEFINITION (FUNCTIONAL API) ---
-print("Building clean Functional model...")
+# --- 3. MODEL DEFINITION (CLEAN SEQUENTIAL) ---
+print("Building clean Sequential model...")
 
-# 1. Define the input
-inputs = keras.Input(shape=(img_height, img_width, 3), name="input_layer")
+model = tf.keras.Sequential([
+    # 1. Define input_shape on the first layer.
+    #    NO augmentation layers.
+    tf.keras.layers.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
+    
+    # 2. The rest of your proven model
+    tf.keras.layers.Conv2D(64, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.Conv2D(64, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.Dropout(0.2), 
+    tf.keras.layers.Conv2D(128, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.Conv2D(128, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(256, activation='relu'),
+    tf.keras.layers.Dense(num_classes) # Output logits
+])
 
-
-# 3. Define the rest of the model
-x = keras.layers.Rescaling(1./255)(inputs) # Start from 'x', not 'inputs'
-x = keras.layers.Conv2D(64, 3, activation='relu')(x)
-x = keras.layers.MaxPooling2D()(x)
-x = keras.layers.Conv2D(64, 3, activation='relu')(x)
-x = keras.layers.MaxPooling2D()(x)
-x = keras.layers.Dropout(0.2)(x)
-x = keras.layers.Conv2D(128, 3, activation='relu')(x)
-x = keras.layers.MaxPooling2D()(x)
-x = keras.layers.Conv2D(128, 3, activation='relu')(x)
-x = keras.layers.MaxPooling2D()(x)
-x = keras.layers.Flatten()(x)
-x = keras.layers.Dense(256, activation='relu')(x)
-
-# 4. Define the output layer (for logits)
-outputs = keras.layers.Dense(num_classes, name="output_layer")(x)
-
-# 5. Create the model
-model = keras.Model(inputs=inputs, outputs=outputs)
-
-model.summary() # This will show you the new structure
+model.summary()
 
 model.compile(
     optimizer='adam',
