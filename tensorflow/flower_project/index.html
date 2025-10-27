@@ -119,7 +119,6 @@
                         const imageTensor = window.tf.browser.fromPixels(imageRef.current)
                             .resizeBilinear([IMAGE_SIZE, IMAGE_SIZE])
                             .toFloat()
-                            .div(window.tf.scalar(255))
                             .expandDims(); 
 
                         // Run prediction
