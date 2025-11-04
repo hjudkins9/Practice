@@ -1,8 +1,8 @@
 # The Flora Finder: A Flower Classification App
 
-This is a **web-based AI project** that uses a **Convolutional Neural Network (CNN)** trained in **TensorFlow** to identify five types of flowers — *daisies, dandelions, roses, sunflowers,* and *tulips* — from an image uploaded by a user.
+This is a web-based AI project that uses a Convolutional Neural Network (CNN) trained in TensorFlow to identify five types of flowers — *daisies, dandelions, roses, sunflowers,* and *tulips* — from an image uploaded by a user.
 
-The classification is performed **100% in the user's browser** using **TensorFlow.js**, making it a **fast** and **privacy-friendly** application.
+The classification is performed 100% in the user's browser using TensorFlow.js, making it a fast and privacy-friendly application.
 
 > (Add a screenshot of your working application here)
 
@@ -29,42 +29,38 @@ The classification is performed **100% in the user's browser** using **TensorFlo
 ## Features
 
 - Identifies 5 types of flowers: *Daisy, Dandelion, Rose, Sunflower,* and *Tulip*  
-- Interactive web interface with **drag-and-drop image uploading**  
-- **Real-time classification** performed on the client-side (in the browser)  
-- **Responsive design** that works across screen sizes  
+- Interactive web interface with drag-and-drop image uploading  
+- Real-time classification performed on the client-side (in the browser)  
+- Responsive design that works across screen sizes  
 
 ---
 
-## The Journey: From Python to the Browser
-
-This project was a complete **end-to-end journey**, from gathering data and training a model in Python to deploying it in a live web application.
-
 ### 1. The Backend (Model Training)
 
-The core **CNN model** was built and trained in Python using **TensorFlow** and **Keras**.  
+The core CNN model was built and trained in Python using TensorFlow and Keras.  
 The architecture and training process followed the official TensorFlow image classification guides.
 
-The model is a **Sequential CNN** containing `Conv2D`, `MaxPooling2D`, `Dropout`, and `Dense` layers.  
+The model is a Sequential CNN containing `Conv2D`, `MaxPooling2D`, `Dropout`, and `Dense` layers.  
 It was trained on the *flower_photos* dataset to classify the five types of flowers.
 
 ---
 
 ### 2. The Frontend (The Web App)
 
-The user interface was built as a **single-page `index.html` file**.  
-While the core logic and project concept were original, the frontend was developed **in collaboration with Google’s Gemini**, which helped with:
+The user interface was built as a single-page `index.html` file.  
+While the core logic and project concept were original, the frontend was developed in collaboration with Google’s Gemini, which helped with:
 
-- Structuring the app using **React** (loaded via in-browser Babel)  
-- Styling components with **Tailwind CSS** for a modern, responsive look  
-- Writing **JavaScript logic** for file uploads, application state management, and TensorFlow.js inference  
+- Structuring the app using React (loaded via in-browser Babel)  
+- Styling components with Tailwind CSS for a modern, responsive look  
+- Writing JavaScript logic for file uploads, application state management, and TensorFlow.js inference  
 
 ---
 
 ### 3. The Challenge: Project-Defining Conversion Bugs
 
-The hardest part of the project wasn’t model training or UI building — it was **getting the trained Python model to run in the browser**.  
+The hardest part of the project wasn’t model training or UI building — it was getting the trained Python model to run in the browser.  
 
-The `tensorflowjs_converter` tool, required for this step, was buggy and needed a **custom workflow** to make it work properly.
+The `tensorflowjs_converter` tool, required for this step, was buggy and needed a custom workflow to make it work properly.
 
 ---
 
@@ -75,9 +71,9 @@ The final model achieved:
 - **Training Accuracy:** 99.6%  
 - **Validation Accuracy:** 67.6%
 
-This reflects a **classic case of overfitting** — the model memorized training data well but struggled to generalize to unseen images.
+This reflects a common symptom of overfitting — the model memorized training data well but struggled to generalize to unseen images.
 
-This was due to removing **data augmentation layers** (`RandomFlip`, `RandomRotation`), as the converter could not process them.  
+This was due to removing data augmentation layers (`RandomFlip`, `RandomRotation`), as the converter could not process them.  
 Their inclusion caused a fatal `"Unknown layer"` error in TensorFlow.js.
 
 **Trade-off:**  
@@ -110,3 +106,4 @@ Two custom patch scripts fixed this:
 2. **Install dependencies**
    ```bash
    pip install tensorflow tensorflowjs h5py
+3. **Train the Model
