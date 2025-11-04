@@ -123,7 +123,7 @@ Two custom patch scripts fixed this:
    
 ---
 
-**Future Improvements**
+## Future Improvements
 While this project is a successfull end-to-end proof of concept, improving accuracy is the next big step. 
 
 1. **Use Transfer Learning**
