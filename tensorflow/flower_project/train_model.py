@@ -1,6 +1,9 @@
 # Henry Judkins
-# Script to train a Flower Classifier CNN
-# This version is CLEANED for conversion.
+# This script trains the flower classification model.
+# It downloads the "flower_photos" dataset, builds a clean
+# Convolutional Neural Network (CNN) model, and trains it.
+# The final, trained model is saved as 'flower_classifier_model.h5'
+# in the 'saved_models' directory.
 
 import numpy as np
 import os
@@ -10,21 +13,18 @@ import tensorflow as tf
 from tensorflow import keras
 import pathlib
 
-# --- CONFIGURATION ---
+# CONFIGURATION
 batch_size = 32
 img_height = 180
 img_width = 180
-# Quick test with 2 epochs
 epochs = 50
-# After this test works, you can set this to 50
-# epochs = 50 
 
-# --- 1. DATA SETUP ---
+# DATA SETUP
 dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
 archive = tf.keras.utils.get_file(origin=dataset_url, extract=True)
 data_dir = pathlib.Path(archive) / 'flower_photos'
 
-# --- 2. DATA LOADING ---
+# DATA LOADING
 print("Loading data for training and validation...")
 train_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
@@ -50,15 +50,11 @@ train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 num_classes = len(class_names)
 
-# --- 3. MODEL DEFINITION (CLEAN SEQUENTIAL) ---
+# MODEL DEFINITION
 print("Building clean Sequential model...")
 
 model = tf.keras.Sequential([
-    # 1. Define input_shape on the first layer.
-    #    NO augmentation layers.
     tf.keras.layers.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
-    
-    # 2. The rest of your proven model
     tf.keras.layers.Conv2D(64, 3, activation='relu'),
     tf.keras.layers.MaxPooling2D(),
     tf.keras.layers.Conv2D(64, 3, activation='relu'),
@@ -80,15 +76,14 @@ model.compile(
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
 
-# --- 4. TRAINING ---
+# TRAINING
 history = model.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs
 )
 
-# --- 5. MODEL SAVING ---
-# We will save as .h5, because we know the converter likes it.
+# MODEL SAVING
 KERAS_OUTPUT_FILE = 'flower_classifier_model.h5' 
 export_dir = os.path.join('saved_models', KERAS_OUTPUT_FILE)
 os.makedirs('saved_models', exist_ok=True)
@@ -96,7 +91,7 @@ os.makedirs('saved_models', exist_ok=True)
 model.save(export_dir) 
 print(f"\nKeras Model saved to: {export_dir}")
 
-# Save class names
+# SAVING CLASS NAMES
 class_names_path = os.path.join('saved_models', 'class_names.txt')
 with open(class_names_path, 'w') as f:
     f.write('\n'.join(class_names))
