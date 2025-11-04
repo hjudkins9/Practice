@@ -106,4 +106,32 @@ Two custom patch scripts fixed this:
 2. **Install dependencies**
    ```bash
    pip install tensorflow tensorflowjs h5py
-3. **Train the Model
+3. **Train the Model**
+   ```bash
+   python train_model.py
+4. **Convert the Model**
+   ```bash
+   python convert.py
+5. **Patch the Model**
+   ```bash
+   python patch_model.py
+6. **Start a Local Server**
+   ```bash
+   python -m http.server 8000
+7. **Open in Browser**
+   Go to http://localhost:8000/index.html
+   
+---
+
+**Future Improvements**
+While this project is a successfull end-to-end proof of concept, improving accuracy is the next big step. 
+
+1. **Use Transfer Learning**
+   Adopt a pre-trained model such as MobileNetV2 as the base classifier.
+2. **Offline Augmentation**
+   Instead of using augmentation layers, pre-augmen tthe dataset on disk to create 5-10x more training samples.
+   This mitigates overfitting without breaking the converter.
+3. **Full React Build**
+   Rebuild the frontend using a proper React + Vite development setup instead of in-browser Babel for a production-ready environment.
+
+---
