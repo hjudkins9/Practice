@@ -31,11 +31,11 @@ The classification is performed 100% in the user's browser using TensorFlow.js, 
 - Identifies 5 types of flowers: *Daisy, Dandelion, Rose, Sunflower,* and *Tulip*  
 - Interactive web interface with drag-and-drop image uploading  
 - Real-time classification performed on the client-side (in the browser)  
-- Responsive design that works across screen sizes  
+- Responsive design that works across several different displays  
 
 ---
 
-### 1. The Backend (Model Training)
+### The Backend (Model Training)
 
 The core CNN model was built and trained in Python using TensorFlow and Keras.  
 The architecture and training process followed the official TensorFlow image classification guides.
@@ -45,7 +45,7 @@ It was trained on the *flower_photos* dataset to classify the five types of flow
 
 ---
 
-### 2. The Frontend (The Web App)
+### The Frontend (The Web App)
 
 The user interface was built as a single-page `index.html` file.  
 While the core logic and project concept were original, the frontend was developed in collaboration with Google’s Gemini, which helped with:
@@ -56,7 +56,7 @@ While the core logic and project concept were original, the frontend was develop
 
 ---
 
-### 3. The Challenge: Project-Defining Conversion Bugs
+### The Challenge: Project-Defining Conversion Bugs
 
 The hardest part of the project wasn’t model training or UI building — it was getting the trained Python model to run in the browser.  
 
@@ -94,7 +94,7 @@ Two custom patch scripts fixed this:
      - **Bug 1:** Replace `"batch_shape"` → `"batch_input_shape"` to fix loading errors.  
      - **Bug 2:** Remove `"sequential/"` prefixes from all layer names to fix weight-loading issues.
 
-**Final workflow:**  
+**Final workflow:**
 `train → convert → patch`
 
 ---
