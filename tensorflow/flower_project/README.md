@@ -4,7 +4,7 @@ This is a web-based AI project that uses a Convolutional Neural Network (CNN) tr
 
 The classification is performed 100% in the user's browser using TensorFlow.js, making it a fast and privacy-friendly application.
 
-! [Picture of Flora Finder Project] ("flora_finder.png")
+! [Picture of Flora Finder Project](flora_finder.png)
 
 ---
 
