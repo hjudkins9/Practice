@@ -4,7 +4,7 @@ This is a web-based AI project that uses a Convolutional Neural Network (CNN) tr
 
 The classification is performed 100% in the user's browser using TensorFlow.js, making it a fast and privacy-friendly application.
 
-> (Add a screenshot of your working application here)
+! [Picture of Flora Finder Project] ("C:\Users\hjudk\Downloads\Pokecum\Screenshot 2025-11-10 114203.png")
 
 ---
 
